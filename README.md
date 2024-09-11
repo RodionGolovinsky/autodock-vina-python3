@@ -21,3 +21,4 @@ git clone git@github.com:RodionGolovinsky/autodock-vina-python3.git
 conda env create -f environment.yml
 conda activate vina
 ```
+3. Use get_docking_score() in [docking.py](src/docking.py) to launch docking :)
