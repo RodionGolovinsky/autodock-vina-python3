@@ -5,24 +5,28 @@ sys.path.append('..')
 from utils.paths import get_project_path
 
 import numpy as np 
-from src.utils.prepare_receptor import prepare_pdb, get_center_of_protein, get_bounding_box
-from src.utils.prepare_ligand import preprocess_ligand
+from utils.prepare_receptor import prepare_pdb, get_center_of_protein, get_bounding_box, get_box_center_and_size
+from utils.prepare_ligand import preprocess_ligand
+
+import time
 
 # Ligand SMILES (Apigenin)
-ligand_smiles = 'C1=CC(=CC=C1C2=CC(=O)C3=C(C=C(C=C3O2)O)O)O'
+ligand_smiles = 'O=C(O)c1cc(Nc2nccc(C3CCOC3)n2)cc(-c2nnco2)c1'
 # Path to PDB for receptor (A2B1) 
-path_receptor_pdb = os.path.join(get_project_path(), 'data', '5ho4.pdb')
+path_receptor_pdb = os.path.join(get_project_path(), 'data', '3fqs_protein.pdb')
+ligand_path = os.path.join(get_project_path(), 'data', '3fqs_reference.pdb')
 
-
-
-def get_docking_score(pdb_fie: str, smiles_ligand: str, n_poses=100, max_steps=100, box_size=None, padding=None):
-
+def get_docking_score(pdb_fie: str, smiles_ligand: str, box_search=False, ligand_file=None, n_poses=100, max_steps=100, padding=10):
+    #start = time.time()
     preprocess_ligand(smiles_ligand)
     prepare_pdb(path_to_receptor=pdb_fie)
 
     v = Vina(sf_name='vina')
 
-    center = get_center_of_protein(path_receptor_pdb)
+    if box_search:
+        center = get_center_of_protein(path_receptor_pdb)
+    else:
+        center = get_box_center_and_size(ligand_file)[0]
 
 
     path_receptor = os.path.join(os.getcwd(), 'receptor.pdbqt')
@@ -31,10 +35,11 @@ def get_docking_score(pdb_fie: str, smiles_ligand: str, n_poses=100, max_steps=1
     v.set_ligand_from_file(path_ligand)
 
     
-    if box_size is None:
-        if padding is None:
-            padding = 10
+    if box_search:
         box_size = get_bounding_box(path_receptor_pdb)
+        box_size = [size + padding for size in box_size]
+    else:
+        box_size = get_box_center_and_size(ligand_file)[1]
         box_size = [size + padding for size in box_size]
 
 
@@ -43,9 +48,11 @@ def get_docking_score(pdb_fie: str, smiles_ligand: str, n_poses=100, max_steps=1
     v.dock(exhaustiveness=32, n_poses=n_poses)
 
     energy_minimized = v.optimize(max_steps=max_steps)
+    #end = time.time()
+    #print(end-start)
     print('Score after minimization : %.3f (kcal/mol)' % energy_minimized[0])
     os.system(f"rm {path_ligand} {path_receptor}")
 
     return energy_minimized[0]
 
-get_docking_score(pdb_fie=path_receptor_pdb, smiles_ligand=ligand_smiles, n_poses=20, max_steps=20)
+get_docking_score(pdb_fie=path_receptor_pdb, smiles_ligand=ligand_smiles, box_search=False, ligand_file=ligand_path, n_poses=20, max_steps=20)

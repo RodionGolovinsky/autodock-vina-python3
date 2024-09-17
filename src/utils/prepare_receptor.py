@@ -46,3 +46,14 @@ def get_bounding_box(pdb_path):
     box_size = max_coords - min_coords
     
     return box_size.tolist()
+
+def get_box_center_and_size(ligand_filename):
+    """
+    Calculates the center and size of the binding box based on the reference ligand coordinates.
+    """
+    run_line = 'python LaBOX.py -l {} -c'.format(ligand_filename)
+    result = subprocess.run(run_line.split(), capture_output=True, text=True)
+    print(result)
+    result_center = [float(i) for i in result.stdout.split('\n')[0].split(' ')]
+    result_size = [float(i) for i in result.stdout.split('\n')[1].split(' ')]
+    return result_center, result_size
